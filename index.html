@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Image Slideshow</title>
+    <style>
+        :root {
+            --background: #f5f5f5;
+            --container-bg: #fff;
+            --text: #222;
+            --indicator: #ddd;
+            --indicator-active: #333;
+            --controls-bg: rgba(0,0,0,0.5);
+            --controls-bg-hover: rgba(0,0,0,0.7);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --background: #18191a;
+                --container-bg: #23272a;
+                --text: #f5f5f5;
+                --indicator: #444;
+                --indicator-active: #fff;
+                --controls-bg: rgba(255,255,255,0.15);
+                --controls-bg-hover: rgba(255,255,255,0.25);
+            }
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slideshow-container {
+            position: relative;
+            max-width: 600px;
+            width: 100%;
+            background: var(--container-bg);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .slides-wrapper {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            overflow: hidden;
+            cursor: grab;
+        }
+
+        .slides-wrapper:active {
+            cursor: grabbing;
+        }
+
+        .slides-track {
+            display: flex;
+            width: 400%;
+            height: 100%;
+            transition: transform 0.3s ease;
+        }
+
+        .slides-track.no-transition {
+            transition: none;
+        }
+
+        .slide {
+            width: 25%;
+            height: 100%;
+            flex-shrink: 0;
+        }
+
+        .slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .controls {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--controls-bg);
+            border: none;
+            color: var(--text);
+            font-size: 20px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .slideshow-container:hover .controls {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .controls:hover {
+            background: var(--controls-bg-hover);
+        }
+
+        .prev-btn {
+            left: 15px;
+        }
+
+        .next-btn {
+            right: 15px;
+        }
+
+        .indicators {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 20px;
+            background: var(--container-bg);
+        }
+
+        .indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--indicator);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .indicator.active {
+            background: var(--indicator-active);
+            transform: scale(1.2);
+        }
+
+        @media (max-width: 768px) {
+            .slideshow-container {
+                margin: 10px;
+            }
+            
+            .slides-wrapper {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slideshow-container">
+        <div class="slides-wrapper" id="slidesWrapper">
+            <div class="slides-track" id="slidesTrack">
+                <div class="slide">
+                    <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop" alt="Mountain Lake">
+                </div>
+                <div class="slide">
+                    <img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=600&fit=crop" alt="Forest Path">
+                </div>
+                <div class="slide">
+                    <img src="https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=800&h=600&fit=crop" alt="Ocean Sunset">
+                </div>
+                <div class="slide">
+                    <img src="https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&h=600&fit=crop" alt="Desert Landscape">
+                </div>
+            </div>
+        </div>
+        
+        <button class="controls prev-btn" onclick="changeSlide(-1)">‹</button>
+        <button class="controls next-btn" onclick="changeSlide(1)">›</button>
+        
+        <div class="indicators">
+            <div class="indicator active" onclick="goToSlide(0)"></div>
+            <div class="indicator" onclick="goToSlide(1)"></div>
+            <div class="indicator" onclick="goToSlide(2)"></div>
+            <div class="indicator" onclick="goToSlide(3)"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const totalSlides = 4;
+        const slidesTrack = document.getElementById('slidesTrack');
+        const slidesWrapper = document.getElementById('slidesWrapper');
+        const indicators = document.querySelectorAll('.indicator');
+        
+        let autoSlideInterval;
+        let isDragging = false;
+        let startX = 0;
+        let currentX = 0;
+        let startTransform = 0;
+
+        // Initialize slideshow
+        function initSlideshow() {
+            updateSlidePosition();
+            startAutoSlide();
+            setupDragListeners();
+        }
+
+        // Auto slide functionality
+        function startAutoSlide() {
+            autoSlideInterval = setInterval(() => {
+                if (!isDragging) {
+                    changeSlide(1);
+                }
+            }, 4000);
+        }
+
+        function resetAutoSlide() {
+            clearInterval(autoSlideInterval);
+            startAutoSlide();
+        }
+
+        // Update slide position
+        function updateSlidePosition() {
+            const translateX = -currentSlide * 25; // 25% per slide
+            slidesTrack.style.transform = `translateX(${translateX}%)`;
+            
+            // Update indicators
+            indicators.forEach((indicator, index) => {
+                indicator.classList.toggle('active', index === currentSlide);
+            });
+        }
+
+        // Slide navigation
+        function changeSlide(direction) {
+            currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
+            updateSlidePosition();
+            resetAutoSlide();
+        }
+
+        function goToSlide(index) {
+            currentSlide = index;
+            updateSlidePosition();
+            resetAutoSlide();
+        }
+
+        // Drag functionality
+        function setupDragListeners() {
+            // Mouse events
+            slidesWrapper.addEventListener('mousedown', startDrag);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', endDrag);
+            
+            // Touch events
+            slidesWrapper.addEventListener('touchstart', startDrag);
+            document.addEventListener('touchmove', drag);
+            document.addEventListener('touchend', endDrag);
+        }
+
+        function startDrag(e) {
+            isDragging = true;
+            slidesTrack.classList.add('no-transition');
+            
+            startX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
+            startTransform = -currentSlide * 25;
+            
+            clearInterval(autoSlideInterval);
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            
+            e.preventDefault();
+            currentX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
+            
+            const deltaX = currentX - startX;
+            const dragPercent = (deltaX / slidesWrapper.offsetWidth) * 40; 
+            const newTransform = startTransform + dragPercent;
+            
+            slidesTrack.style.transform = `translateX(${newTransform}%)`;
+        }
+
+        function endDrag() {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            slidesTrack.classList.remove('no-transition');
+            
+            const deltaX = currentX - startX;
+            const threshold = slidesWrapper.offsetWidth / 4;
+            
+            if (Math.abs(deltaX) > threshold) {
+                const direction = deltaX < 0 ? 1 : -1;
+                changeSlide(direction);
+            } else {
+                updateSlidePosition();
+                resetAutoSlide();
+            }
+        }
+
+        // Prevent image dragging
+        document.querySelectorAll('img').forEach(img => {
+            img.addEventListener('dragstart', e => e.preventDefault());
+        });
+
+        // Initialize
+        initSlideshow();
+
+        // Pause on hover (desktop only)
+        if (!('ontouchstart' in window)) {
+            slidesWrapper.addEventListener('mouseenter', () => {
+                clearInterval(autoSlideInterval);
+            });
+            
+            slidesWrapper.addEventListener('mouseleave', () => {
+                if (!isDragging) {
+                    resetAutoSlide();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
